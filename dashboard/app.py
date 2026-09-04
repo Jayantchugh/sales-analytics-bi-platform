@@ -19,7 +19,17 @@ from analytics import (
     get_top_products,
     numpy_statistical_summary,
 )
-from config import DB_PATH
+from config import DATA_DIR, DB_PATH
+
+
+def ensure_database() -> None:
+    """Create the SQLite database on first run (e.g. Streamlit Cloud deploy)."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if DB_PATH.exists():
+        return
+    from generate_data import generate_and_load
+    generate_and_load()
+
 
 st.set_page_config(
     page_title="Sales Analytics | BI Platform",
@@ -84,9 +94,11 @@ def render_kpi_cards(kpis: dict):
 
 def main():
     if not DB_PATH.exists():
-        st.error("Database not found. Run `python python/generate_data.py` first.")
-        st.code("cd \"Business Intelligence\" && python python/generate_data.py", language="bash")
-        st.stop()
+        with st.spinner(
+            "Setting up analytics database (250,000+ sales records). "
+            "This runs once on first launch and may take about 30 seconds..."
+        ):
+            ensure_database()
 
     st.sidebar.title("📊 Sales Analytics")
     st.sidebar.markdown("**Business Intelligence Platform**")
