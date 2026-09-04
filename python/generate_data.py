@@ -197,8 +197,32 @@ def _init_database(conn: sqlite3.Connection) -> None:
             conn.executescript(f.read())
 
 
+def _prepare_df_for_sqlite(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize dtypes for reliable SQLite inserts across Python versions."""
+    prepared = df.copy()
+    for col in prepared.columns:
+        series = prepared[col]
+        if pd.api.types.is_datetime64_any_dtype(series):
+            prepared[col] = series.dt.strftime("%Y-%m-%d")
+        elif series.dtype == object:
+            if series.map(lambda x: hasattr(x, "isoformat")).any():
+                prepared[col] = series.map(
+                    lambda x: x.isoformat() if hasattr(x, "isoformat") else x
+                )
+            prepared[col] = prepared[col].astype(str).replace("nan", None)
+        elif pd.api.types.is_bool_dtype(series):
+            prepared[col] = series.astype(int)
+        elif pd.api.types.is_integer_dtype(series):
+            prepared[col] = series.astype(int)
+        elif pd.api.types.is_float_dtype(series):
+            prepared[col] = series.astype(float)
+    return prepared
+
+
 def _load_dataframe(conn: sqlite3.Connection, df: pd.DataFrame, table: str) -> None:
-    df.to_sql(table, conn, if_exists="append", index=False)
+    prepared = _prepare_df_for_sqlite(df)
+    chunksize = 10_000 if len(prepared) > 10_000 else None
+    prepared.to_sql(table, conn, if_exists="append", index=False, chunksize=chunksize)
 
 
 def generate_and_load() -> dict:
@@ -220,6 +244,7 @@ def generate_and_load() -> dict:
     print("Loading into database...")
     conn = sqlite3.connect(DB_PATH)
     try:
+        conn.execute("PRAGMA foreign_keys = OFF")
         _init_database(conn)
         for table, df in [
             ("dim_products", products),
@@ -230,7 +255,14 @@ def generate_and_load() -> dict:
             ("agg_monthly_sales", monthly),
         ]:
             _load_dataframe(conn, df, table)
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.commit()
+    except Exception:
+        conn.rollback()
+        conn.close()
+        if DB_PATH.exists():
+            DB_PATH.unlink()
+        raise
     finally:
         conn.close()
 

@@ -1,5 +1,6 @@
 """Configuration constants for the Sales Analytics platform."""
 
+import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -7,7 +8,16 @@ DATA_DIR = PROJECT_ROOT / "data"
 SQL_DIR = PROJECT_ROOT / "sql"
 DB_PATH = DATA_DIR / "sales_analytics.db"
 
-NUM_SALES_RECORDS = 250_000
+
+def is_streamlit_cloud() -> bool:
+    return (
+        os.environ.get("STREAMLIT_RUNTIME_ENVIRONMENT") == "cloud"
+        or Path("/mount/src").exists()
+    )
+
+
+_DEFAULT_RECORDS = "100000" if is_streamlit_cloud() else "250000"
+NUM_SALES_RECORDS = int(os.environ.get("NUM_SALES_RECORDS", _DEFAULT_RECORDS))
 NUM_PRODUCTS = 500
 NUM_CUSTOMERS = 10_000
 NUM_REGIONS = 12

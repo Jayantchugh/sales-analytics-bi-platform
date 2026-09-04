@@ -19,16 +19,18 @@ from analytics import (
     get_top_products,
     numpy_statistical_summary,
 )
-from config import DATA_DIR, DB_PATH
+from config import DATA_DIR, DB_PATH, NUM_SALES_RECORDS, NUM_SALES_RECORDS
 
 
-def ensure_database() -> None:
-    """Create the SQLite database on first run (e.g. Streamlit Cloud deploy)."""
+@st.cache_resource(show_spinner=False)
+def initialize_database() -> str:
+    """Build the SQLite database once per Streamlit session (avoids rerun conflicts)."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     if DB_PATH.exists():
-        return
+        return str(DB_PATH)
     from generate_data import generate_and_load
     generate_and_load()
+    return str(DB_PATH)
 
 
 st.set_page_config(
@@ -95,10 +97,12 @@ def render_kpi_cards(kpis: dict):
 def main():
     if not DB_PATH.exists():
         with st.spinner(
-            "Setting up analytics database (250,000+ sales records). "
+            f"Setting up analytics database ({NUM_SALES_RECORDS:,} sales records). "
             "This runs once on first launch and may take about 30 seconds..."
         ):
-            ensure_database()
+            initialize_database()
+    else:
+        initialize_database()
 
     st.sidebar.title("📊 Sales Analytics")
     st.sidebar.markdown("**Business Intelligence Platform**")
@@ -115,7 +119,7 @@ def main():
     year = years[year_labels.index(selected_label)]
 
     st.sidebar.divider()
-    st.sidebar.caption("250,000+ sales records | Python · SQL · Pandas · NumPy")
+    st.sidebar.caption(f"{NUM_SALES_RECORDS:,}+ sales records | Python · SQL · Pandas · NumPy")
 
     if page == "Executive Overview":
         st.title("Executive Overview")
