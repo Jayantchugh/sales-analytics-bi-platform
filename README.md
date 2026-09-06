@@ -2,18 +2,6 @@
 
 A portfolio-grade analytics project demonstrating end-to-end BI capabilities: **250,000+ sales records**, optimized SQL, Python/Pandas analysis, and interactive dashboards.
 
-Built for Business Analyst (BA) and Project Analyst (PA) roles.
-
----
-
-## What This Project Demonstrates
-
-| Resume Bullet | How It's Shown Here |
-|---|---|
-| Analyzed 250,000+ sales records using Python, SQL, Pandas, NumPy | `generate_data.py` creates 250K transactions; `analytics.py` runs statistical analysis |
-| Optimized SQL queries, reducing execution time by ~20% | Indexed schema + pre-aggregated tables; benchmark page in dashboard |
-| Interactive dashboards for real-time business insights | Streamlit dashboard with 5 views; Power BI connection guide included |
-
 ---
 
 ## Tech Stack
